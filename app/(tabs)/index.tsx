@@ -1,75 +1,176 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Clock, Dumbbell, Target } from "lucide-react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function WorkoutsTab() {
+  const workouts = [
+    {
+      id: 1,
+      name: "Upper Body Strength",
+      exercises: 6,
+      duration: 45,
+      lastPerformed: "2 days ago",
+    },
+    {
+      id: 2,
+      name: "Cardio HIIT",
+      exercises: 8,
+      duration: 30,
+      lastPerformed: "1 week ago",
+    },
+  ];
 
-export default function HomeScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.header}>
+          <Text style={styles.title}>My Workouts</Text>
+          <Text style={styles.subtitle}>Track your fitness journey</Text>
+        </View>
+
+        <View style={styles.workoutsList}>
+          {workouts.map((workout) => (
+            <TouchableOpacity key={workout.id} style={styles.workoutCard}>
+              <View style={styles.workoutHeader}>
+                <View style={styles.workoutIcon}>
+                  <Dumbbell size={24} color="#3B82F6" />
+                </View>
+                <View style={styles.workoutInfo}>
+                  <Text style={styles.workoutName}>{workout.name}</Text>
+                  <Text style={styles.workoutMeta}>
+                    Last: {workout.lastPerformed}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.workoutStats}>
+                <View style={styles.stat}>
+                  <Target size={16} color="#6B7280" />
+                  <Text style={styles.statText}>
+                    {workout.exercises} exercises
+                  </Text>
+                </View>
+                <View style={styles.stat}>
+                  <Clock size={16} color="#6B7280" />
+                  <Text style={styles.statText}>{workout.duration} min</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>
+            Ready to create your first workout?
+          </Text>
+          <Text style={styles.emptySubtext}>
+            Tap the Create tab to get started
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  container: {
+    flex: 1,
+    backgroundColor: "#F9FAFB",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  header: {
+    padding: 24,
+    paddingBottom: 16,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#6B7280",
+  },
+  workoutsList: {
+    paddingHorizontal: 24,
+    gap: 16,
+  },
+  workoutCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  workoutHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  workoutIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  workoutInfo: {
+    flex: 1,
+  },
+  workoutName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  workoutMeta: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  workoutStats: {
+    flexDirection: "row",
+    gap: 20,
+  },
+  stat: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
+  statText: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  emptyState: {
+    alignItems: "center",
+    padding: 40,
+    marginTop: 20,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  emptySubtext: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
   },
 });
