@@ -1,3 +1,4 @@
+import { AuthGuard } from "@/components/AuthGuard";
 import { Clock, Dumbbell, Target } from "lucide-react-native";
 import {
   ScrollView,
@@ -27,54 +28,53 @@ export default function WorkoutsTab() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.title}>My Workouts</Text>
-          <Text style={styles.subtitle}>Track your fitness journey</Text>
-        </View>
-
-        <View style={styles.workoutsList}>
-          {workouts.map((workout) => (
-            <TouchableOpacity key={workout.id} style={styles.workoutCard}>
-              <View style={styles.workoutHeader}>
-                <View style={styles.workoutIcon}>
-                  <Dumbbell size={24} color="#3B82F6" />
+    <AuthGuard>
+      <SafeAreaView style={styles.container}>
+        <ScrollView style={styles.scrollView}>
+          <View style={styles.header}>
+            <Text style={styles.title}>My Workouts</Text>
+            <Text style={styles.subtitle}>Track your fitness journey</Text>
+          </View>
+          <View style={styles.workoutsList}>
+            {workouts.map((workout) => (
+              <TouchableOpacity key={workout.id} style={styles.workoutCard}>
+                <View style={styles.workoutHeader}>
+                  <View style={styles.workoutIcon}>
+                    <Dumbbell size={24} color="#3B82F6" />
+                  </View>
+                  <View style={styles.workoutInfo}>
+                    <Text style={styles.workoutName}>{workout.name}</Text>
+                    <Text style={styles.workoutMeta}>
+                      Last: {workout.lastPerformed}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.workoutInfo}>
-                  <Text style={styles.workoutName}>{workout.name}</Text>
-                  <Text style={styles.workoutMeta}>
-                    Last: {workout.lastPerformed}
-                  </Text>
+                <View style={styles.workoutStats}>
+                  <View style={styles.stat}>
+                    <Target size={16} color="#6B7280" />
+                    <Text style={styles.statText}>
+                      {workout.exercises} exercises
+                    </Text>
+                  </View>
+                  <View style={styles.stat}>
+                    <Clock size={16} color="#6B7280" />
+                    <Text style={styles.statText}>{workout.duration} min</Text>
+                  </View>
                 </View>
-              </View>
-
-              <View style={styles.workoutStats}>
-                <View style={styles.stat}>
-                  <Target size={16} color="#6B7280" />
-                  <Text style={styles.statText}>
-                    {workout.exercises} exercises
-                  </Text>
-                </View>
-                <View style={styles.stat}>
-                  <Clock size={16} color="#6B7280" />
-                  <Text style={styles.statText}>{workout.duration} min</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>
-            Ready to create your first workout?
-          </Text>
-          <Text style={styles.emptySubtext}>
-            Tap the Create tab to get started
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>
+              Ready to create your first workout?
+            </Text>
+            <Text style={styles.emptySubtext}>
+              Tap the Create tab to get started
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </AuthGuard>
   );
 }
 

@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Dumbbell, Plus } from "lucide-react-native";
+import { Calendar, CircleUser, Dumbbell, Plus } from "lucide-react-native";
 
 export default function TabLayout() {
   return (
@@ -37,6 +37,24 @@ export default function TabLayout() {
         options={{
           title: "Create",
           tabBarIcon: ({ size, color }) => <Plus size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: "Calendar",
+          tabBarIcon: ({ size, color }) => (
+            <Calendar size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ size, color }) => (
+            <CircleUser size={size} color={color} />
+          ),
         }}
       />
     </Tabs>
