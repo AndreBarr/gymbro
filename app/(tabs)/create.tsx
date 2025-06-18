@@ -1,9 +1,10 @@
 import { AuthGuard } from "@/components/AuthGuard";
 import ExercisePicker from "@/components/ExercisePicker";
+import { useSupabaseSession } from "@/context/SupabaseProvider";
+import { supabase } from "@/lib/supabase";
 import {
   ChevronDown,
   ChevronUp,
-  Hash,
   Plus,
   Save,
   Search,
@@ -31,15 +32,17 @@ interface Exercise {
   name: string;
   sets: number;
   reps: string;
-  weight: string;
+  resistanceValue: string;
   isBodyWeight: boolean;
   isRepRange: boolean;
-  repMin: string;
-  repMax: string;
+  repsMin: string;
+  repsMax: string;
   isCollapsed: boolean;
 }
 
 export default function CreateWorkoutTab() {
+  const session = useSupabaseSession();
+
   const [workoutName, setWorkoutName] = useState("");
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
@@ -50,11 +53,11 @@ export default function CreateWorkoutTab() {
       name: exerciseName,
       sets: 3,
       reps: "",
-      weight: "",
+      resistanceValue: "",
       isBodyWeight: false,
       isRepRange: false,
-      repMin: "",
-      repMax: "",
+      repsMin: "",
+      repsMax: "",
       isCollapsed: false,
     };
 
@@ -98,7 +101,7 @@ export default function CreateWorkoutTab() {
           return {
             ...exercise,
             isBodyWeight: !exercise.isBodyWeight,
-            weight: !exercise.isBodyWeight ? "" : exercise.weight,
+            weight: !exercise.isBodyWeight ? "" : exercise.resistanceValue,
           };
         }
         return exercise;
@@ -114,8 +117,8 @@ export default function CreateWorkoutTab() {
             ...exercise,
             isRepRange: !exercise.isRepRange,
             reps: !exercise.isRepRange ? "" : exercise.reps,
-            repMin: !exercise.isRepRange ? exercise.reps : "",
-            repMax: !exercise.isRepRange ? "" : "",
+            repsMin: !exercise.isRepRange ? exercise.reps : "",
+            repsMax: !exercise.isRepRange ? "" : "",
           };
         }
         return exercise;
@@ -125,8 +128,8 @@ export default function CreateWorkoutTab() {
 
   const getRepDisplay = (exercise: Exercise) => {
     if (exercise.isRepRange) {
-      const min = exercise.repMin || "—";
-      const max = exercise.repMax || "—";
+      const min = exercise.repsMin || "—";
+      const max = exercise.repsMax || "—";
       return `${min}-${max}`;
     }
     return exercise.reps || "—";
@@ -134,11 +137,13 @@ export default function CreateWorkoutTab() {
 
   const getExerciseSummary = (exercise: Exercise) => {
     const reps = getRepDisplay(exercise);
-    const weight = exercise.isBodyWeight ? "BW" : exercise.weight || "—";
+    const weight = exercise.isBodyWeight
+      ? "BW"
+      : exercise.resistanceValue || "—";
     return `${exercise.sets} sets × ${reps} × ${weight}`;
   };
 
-  const saveWorkout = () => {
+  const saveWorkout = async () => {
     if (!workoutName.trim()) {
       Alert.alert("Error", "Please enter a workout name");
       return;
@@ -146,6 +151,39 @@ export default function CreateWorkoutTab() {
 
     if (exercises.length === 0) {
       Alert.alert("Error", "Please add at least one exercise");
+      return;
+    }
+
+    const { data: workout, error } = await supabase
+      .from("workouts")
+      .insert({ user_id: session?.user.id, name: workoutName })
+      .select()
+      .single();
+
+    if (error || !workout) {
+      Alert.alert("Error", "Failed to save workout");
+      return;
+    }
+
+    const exercisePayload = exercises.map((exercise, idx) => ({
+      workout_id: workout.id,
+      position: idx,
+      sets: exercise.sets,
+      reps: exercise.isRepRange ? null : exercise.reps,
+      reps_min: exercise.isRepRange ? exercise.repsMin : null,
+      reps_max: exercise.isRepRange ? exercise.repsMax : null,
+      resistance_value: exercise.isBodyWeight ? null : exercise.resistanceValue,
+      is_bodyweight: exercise.isBodyWeight,
+    }));
+
+    const { error: exerciseError } = await supabase
+      .from("workout_exercises")
+      .insert(exercisePayload);
+
+    console.log("Exercise error", exerciseError);
+
+    if (exerciseError) {
+      Alert.alert("Error", "Failed to save exercises");
       return;
     }
 
@@ -291,13 +329,12 @@ export default function CreateWorkoutTab() {
                         {exercise.isRepRange ? (
                           <View style={styles.rangeContainer}>
                             <View style={styles.rangeInputContainer}>
-                              <Hash size={16} color="#6B7280" />
                               <TextInput
                                 style={styles.rangeInput}
                                 placeholder="8"
-                                value={exercise.repMin}
+                                value={exercise.repsMin}
                                 onChangeText={(value) =>
-                                  updateExercise(exercise.id, "repMin", value)
+                                  updateExercise(exercise.id, "repsMin", value)
                                 }
                                 keyboardType="numeric"
                                 placeholderTextColor="#9CA3AF"
@@ -305,13 +342,12 @@ export default function CreateWorkoutTab() {
                             </View>
                             <Text style={styles.rangeSeparator}>to</Text>
                             <View style={styles.rangeInputContainer}>
-                              <Hash size={16} color="#6B7280" />
                               <TextInput
                                 style={styles.rangeInput}
                                 placeholder="12"
-                                value={exercise.repMax}
+                                value={exercise.repsMax}
                                 onChangeText={(value) =>
-                                  updateExercise(exercise.id, "repMax", value)
+                                  updateExercise(exercise.id, "repsMax", value)
                                 }
                                 keyboardType="numeric"
                                 placeholderTextColor="#9CA3AF"
@@ -320,7 +356,6 @@ export default function CreateWorkoutTab() {
                           </View>
                         ) : (
                           <View style={styles.inputContainer}>
-                            <Hash size={16} color="#6B7280" />
                             <TextInput
                               style={styles.input}
                               placeholder="12"
@@ -360,9 +395,13 @@ export default function CreateWorkoutTab() {
                             <TextInput
                               style={styles.input}
                               placeholder="135 lbs"
-                              value={exercise.weight}
+                              value={exercise.resistanceValue}
                               onChangeText={(value) =>
-                                updateExercise(exercise.id, "weight", value)
+                                updateExercise(
+                                  exercise.id,
+                                  "resistanceValue",
+                                  value
+                                )
                               }
                               keyboardType="numeric"
                               placeholderTextColor="#9CA3AF"
@@ -384,7 +423,7 @@ export default function CreateWorkoutTab() {
                               {getRepDisplay(exercise)} ×{" "}
                               {exercise.isBodyWeight
                                 ? "BW"
-                                : exercise.weight || "—"}
+                                : exercise.resistanceValue || "—"}
                             </Text>
                           </View>
                         ))}

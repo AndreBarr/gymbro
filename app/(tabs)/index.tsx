@@ -1,6 +1,11 @@
 import { AuthGuard } from "@/components/AuthGuard";
+import { useSupabaseSession } from "@/context/SupabaseProvider";
+import { supabase } from "@/lib/supabase";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Clock, Dumbbell, Target } from "lucide-react-native";
+import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,22 +15,32 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function WorkoutsTab() {
-  const workouts = [
-    {
-      id: 1,
-      name: "Upper Body Strength",
-      exercises: 6,
-      duration: 45,
-      lastPerformed: "2 days ago",
-    },
-    {
-      id: 2,
-      name: "Cardio HIIT",
-      exercises: 8,
-      duration: 30,
-      lastPerformed: "1 week ago",
-    },
-  ];
+  const router = useRouter();
+  const session = useSupabaseSession();
+  const [workouts, setWorkouts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchWorkouts = async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("workouts")
+          .select("*")
+          .eq("user_id", session?.user.id)
+          .order("created_at", { ascending: false });
+        if (error) {
+          console.error("Error fetching workouts:", error.message);
+        } else {
+          setWorkouts(data);
+        }
+        setLoading(false);
+      };
+      if (session?.user) {
+        fetchWorkouts();
+      }
+    }, [session])
+  );
 
   return (
     <AuthGuard>
@@ -36,42 +51,54 @@ export default function WorkoutsTab() {
             <Text style={styles.subtitle}>Track your fitness journey</Text>
           </View>
           <View style={styles.workoutsList}>
-            {workouts.map((workout) => (
-              <TouchableOpacity key={workout.id} style={styles.workoutCard}>
-                <View style={styles.workoutHeader}>
-                  <View style={styles.workoutIcon}>
-                    <Dumbbell size={24} color="#3B82F6" />
+            {loading ? (
+              <ActivityIndicator size="large" color="#3B82F6" />
+            ) : workouts.length > 0 ? (
+              workouts.map((workout) => (
+                <TouchableOpacity
+                  key={workout.id}
+                  style={styles.workoutCard}
+                  onPress={() => router.push(`./workouts/${workout.id}`)}
+                >
+                  <View style={styles.workoutHeader}>
+                    <View style={styles.workoutIcon}>
+                      <Dumbbell size={24} color="#3B82F6" />
+                    </View>
+                    <View style={styles.workoutInfo}>
+                      <Text style={styles.workoutName}>{workout.name}</Text>
+                      {/* <Text style={styles.workoutMeta}>
+                        Last: {workout.last_performed ?? "Never"}
+                      </Text> */}
+                    </View>
                   </View>
-                  <View style={styles.workoutInfo}>
-                    <Text style={styles.workoutName}>{workout.name}</Text>
-                    <Text style={styles.workoutMeta}>
-                      Last: {workout.lastPerformed}
-                    </Text>
+                  <View style={styles.workoutStats}>
+                    <View style={styles.stat}>
+                      <Target size={16} color="#6B7280" />
+                      {/* <Text style={styles.statText}>
+                        {workout.exercise_count ?? "?"} exercises
+                      </Text> */}
+                    </View>
+                    <View style={styles.stat}>
+                      <Clock size={16} color="#6B7280" />
+                      <Text style={styles.statText}>
+                        {workout.duration ?? "?"} min
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.workoutStats}>
-                  <View style={styles.stat}>
-                    <Target size={16} color="#6B7280" />
-                    <Text style={styles.statText}>
-                      {workout.exercises} exercises
-                    </Text>
-                  </View>
-                  <View style={styles.stat}>
-                    <Clock size={16} color="#6B7280" />
-                    <Text style={styles.statText}>{workout.duration} min</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+                </TouchableOpacity>
+              ))
+            ) : null}
           </View>
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>
-              Ready to create your first workout?
-            </Text>
-            <Text style={styles.emptySubtext}>
-              Tap the Create tab to get started
-            </Text>
-          </View>
+          {workouts.length < 1 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>
+                Ready to create your first workout?
+              </Text>
+              <Text style={styles.emptySubtext}>
+                Tap the Create tab to get started
+              </Text>
+            </View>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </AuthGuard>
