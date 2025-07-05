@@ -44,8 +44,12 @@ export default function WorkoutsTab() {
 
   return (
     <AuthGuard>
-      <SafeAreaView style={styles.container}>
-        <ScrollView style={styles.scrollView}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
             <Text style={styles.title}>My Workouts</Text>
             <Text style={styles.subtitle}>Track your fitness journey</Text>
@@ -113,9 +117,13 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 32,
+  },
   header: {
     padding: 24,
     paddingBottom: 16,
+    paddingTop: 16,
   },
   title: {
     fontSize: 32,

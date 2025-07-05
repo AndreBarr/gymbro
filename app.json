@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "gymbro",
-    "slug": "gymbro",
+    "name": "gymlog",
+    "slug": "gymlog",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "gymbro",
+    "icon": "./assets/images/gymlog.png",
+    "scheme": "gymlog",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.andrebarr.gymbro",
+      "bundleIdentifier": "com.andrebarr.gymlog",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

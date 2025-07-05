@@ -1,7 +1,7 @@
 import { AuthGuard } from "@/components/AuthGuard";
 import ExercisePicker from "@/components/ExercisePicker";
 import { useSupabaseSession } from "@/context/SupabaseProvider";
-import { supabase } from "@/lib/supabase";
+import { Exercise, supabase } from "@/lib/supabase";
 import {
   ChevronDown,
   ChevronUp,
@@ -27,7 +27,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-interface Exercise {
+interface WorkoutExercise {
   id: string;
   name: string;
   sets: number;
@@ -44,13 +44,14 @@ export default function CreateWorkoutTab() {
   const session = useSupabaseSession();
 
   const [workoutName, setWorkoutName] = useState("");
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
 
-  const addExercise = (exerciseName: string) => {
-    const newExercise: Exercise = {
-      id: Date.now().toString(),
-      name: exerciseName,
+  const addExercise = (exercise: Exercise) => {
+    console.log("Adding exercise...");
+    const newExercise: WorkoutExercise = {
+      id: exercise.id,
+      name: exercise.name,
       sets: 3,
       reps: "",
       resistanceValue: "",
@@ -60,7 +61,6 @@ export default function CreateWorkoutTab() {
       repsMax: "",
       isCollapsed: false,
     };
-
     setExercises([...exercises, newExercise]);
   };
 
@@ -81,7 +81,7 @@ export default function CreateWorkoutTab() {
 
   const updateExercise = (
     exerciseId: string,
-    field: keyof Exercise,
+    field: keyof WorkoutExercise,
     value: any
   ) => {
     setExercises(
@@ -126,7 +126,7 @@ export default function CreateWorkoutTab() {
     );
   };
 
-  const getRepDisplay = (exercise: Exercise) => {
+  const getRepDisplay = (exercise: WorkoutExercise) => {
     if (exercise.isRepRange) {
       const min = exercise.repsMin || "—";
       const max = exercise.repsMax || "—";
@@ -135,7 +135,7 @@ export default function CreateWorkoutTab() {
     return exercise.reps || "—";
   };
 
-  const getExerciseSummary = (exercise: Exercise) => {
+  const getExerciseSummary = (exercise: WorkoutExercise) => {
     const reps = getRepDisplay(exercise);
     const weight = exercise.isBodyWeight
       ? "BW"
@@ -167,6 +167,7 @@ export default function CreateWorkoutTab() {
 
     const exercisePayload = exercises.map((exercise, idx) => ({
       workout_id: workout.id,
+      exercise_id: exercise.id,
       position: idx,
       sets: exercise.sets,
       reps: exercise.isRepRange ? null : exercise.reps,
@@ -200,8 +201,12 @@ export default function CreateWorkoutTab() {
 
   return (
     <AuthGuard>
-      <SafeAreaView style={styles.container}>
-        <ScrollView style={styles.scrollView}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
             <Text style={styles.title}>Create Workout</Text>
             <Text style={styles.subtitle}>
@@ -247,6 +252,10 @@ export default function CreateWorkoutTab() {
                   </View>
                   <View style={styles.exerciseInfo}>
                     <Text style={styles.exerciseName}>{exercise.name}</Text>
+                    {/* <Text style={styles.exerciseCategory}>
+                      {exercise.exercise.category} •{" "}
+                      {exercise.exercise.muscle_groups}
+                    </Text> */}
                     {exercise.isCollapsed && (
                       <Text style={styles.exerciseSummary}>
                         {getExerciseSummary(exercise)}
@@ -271,6 +280,17 @@ export default function CreateWorkoutTab() {
                 </TouchableOpacity>
                 {!exercise.isCollapsed && (
                   <View style={styles.exerciseDetails}>
+                    {/* Exercise Instructions */}
+                    {/* {exercise.exercise.instructions && (
+                      <View style={styles.instructionsContainer}>
+                        <Text style={styles.instructionsTitle}>
+                          Instructions
+                        </Text>
+                        <Text style={styles.instructionsText}>
+                          {exercise.exercise.instructions}
+                        </Text>
+                      </View>
+                    )} */}
                     {/* Sets Control */}
                     <View style={styles.controlRow}>
                       <Text style={styles.controlLabel}>Sets</Text>
@@ -461,9 +481,13 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 32,
+  },
   header: {
     padding: 24,
     paddingBottom: 16,
+    paddingTop: 16,
   },
   title: {
     fontSize: 32,
@@ -566,6 +590,11 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginBottom: 2,
   },
+  // exerciseCategory: {
+  //   fontSize: 14,
+  //   color: "#6B7280",
+  //   marginBottom: 4,
+  // },
   exerciseSummary: {
     fontSize: 14,
     color: "#6B7280",
@@ -589,6 +618,24 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#F3F4F6",
   },
+  // instructionsContainer: {
+  //   backgroundColor: "#F8FAFC",
+  //   padding: 12,
+  //   borderRadius: 8,
+  //   borderLeftWidth: 3,
+  //   borderLeftColor: "#3B82F6",
+  // },
+  // instructionsTitle: {
+  //   fontSize: 14,
+  //   fontWeight: "600",
+  //   color: "#374151",
+  //   marginBottom: 4,
+  // },
+  // instructionsText: {
+  //   fontSize: 14,
+  //   color: "#6B7280",
+  //   lineHeight: 20,
+  // },
   controlRow: {
     flexDirection: "row",
     alignItems: "center",

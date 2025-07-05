@@ -42,7 +42,7 @@ export default function WorkoutDetail() {
     // Transform the exercises into expected structure
     console.log("data", data);
     const exercises = data.workout_exercises.map((we: any) => ({
-      name: we.exercises.name,
+      name: we.exercise.name,
       sets: we.sets,
       reps: we.reps,
       repsMin: we.reps_min,

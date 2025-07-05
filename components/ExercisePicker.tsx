@@ -1,6 +1,16 @@
-import { Activity, Dumbbell, Search, Target, X } from "lucide-react-native";
-import React, { useState } from "react";
+import { Exercise, supabase } from "@/lib/supabase";
 import {
+  Activity,
+  Dumbbell,
+  Plus,
+  Search,
+  Target,
+  X,
+} from "lucide-react-native";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -9,84 +19,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-interface Exercise {
-  name: string;
-  category: string;
-  muscle: string;
-}
-
-const PREDEFINED_EXERCISES: Exercise[] = [
-  // Chest
-  { name: "Push-ups", category: "Chest", muscle: "Chest, Triceps" },
-  { name: "Bench Press", category: "Chest", muscle: "Chest, Triceps" },
-  { name: "Incline Bench Press", category: "Chest", muscle: "Upper Chest" },
-  { name: "Decline Bench Press", category: "Chest", muscle: "Lower Chest" },
-  { name: "Dumbbell Flyes", category: "Chest", muscle: "Chest" },
-  { name: "Chest Dips", category: "Chest", muscle: "Chest, Triceps" },
-
-  // Back
-  { name: "Pull-ups", category: "Back", muscle: "Lats, Biceps" },
-  { name: "Chin-ups", category: "Back", muscle: "Lats, Biceps" },
-  { name: "Deadlifts", category: "Back", muscle: "Back, Glutes, Hamstrings" },
-  { name: "Bent-over Rows", category: "Back", muscle: "Lats, Rhomboids" },
-  { name: "T-Bar Rows", category: "Back", muscle: "Lats, Rhomboids" },
-  { name: "Lat Pulldowns", category: "Back", muscle: "Lats" },
-  { name: "Seated Cable Rows", category: "Back", muscle: "Lats, Rhomboids" },
-
-  // Legs
-  { name: "Squats", category: "Legs", muscle: "Quads, Glutes" },
-  { name: "Lunges", category: "Legs", muscle: "Quads, Glutes" },
-  { name: "Leg Press", category: "Legs", muscle: "Quads, Glutes" },
-  {
-    name: "Romanian Deadlifts",
-    category: "Legs",
-    muscle: "Hamstrings, Glutes",
-  },
-  { name: "Leg Curls", category: "Legs", muscle: "Hamstrings" },
-  { name: "Leg Extensions", category: "Legs", muscle: "Quadriceps" },
-  { name: "Calf Raises", category: "Legs", muscle: "Calves" },
-  { name: "Bulgarian Split Squats", category: "Legs", muscle: "Quads, Glutes" },
-
-  // Shoulders
-  {
-    name: "Overhead Press",
-    category: "Shoulders",
-    muscle: "Shoulders, Triceps",
-  },
-  { name: "Lateral Raises", category: "Shoulders", muscle: "Side Delts" },
-  { name: "Front Raises", category: "Shoulders", muscle: "Front Delts" },
-  { name: "Rear Delt Flyes", category: "Shoulders", muscle: "Rear Delts" },
-  { name: "Arnold Press", category: "Shoulders", muscle: "Shoulders" },
-  { name: "Upright Rows", category: "Shoulders", muscle: "Shoulders, Traps" },
-
-  // Arms
-  { name: "Bicep Curls", category: "Arms", muscle: "Biceps" },
-  { name: "Hammer Curls", category: "Arms", muscle: "Biceps, Forearms" },
-  { name: "Tricep Dips", category: "Arms", muscle: "Triceps" },
-  { name: "Tricep Extensions", category: "Arms", muscle: "Triceps" },
-  {
-    name: "Close-grip Bench Press",
-    category: "Arms",
-    muscle: "Triceps, Chest",
-  },
-  { name: "Preacher Curls", category: "Arms", muscle: "Biceps" },
-
-  // Core
-  { name: "Plank", category: "Core", muscle: "Core" },
-  { name: "Crunches", category: "Core", muscle: "Abs" },
-  { name: "Russian Twists", category: "Core", muscle: "Obliques" },
-  { name: "Mountain Climbers", category: "Core", muscle: "Core, Cardio" },
-  { name: "Dead Bug", category: "Core", muscle: "Core" },
-  { name: "Bicycle Crunches", category: "Core", muscle: "Abs, Obliques" },
-
-  // Cardio
-  { name: "Burpees", category: "Cardio", muscle: "Full Body" },
-  { name: "Jumping Jacks", category: "Cardio", muscle: "Full Body" },
-  { name: "High Knees", category: "Cardio", muscle: "Legs, Cardio" },
-  { name: "Jump Rope", category: "Cardio", muscle: "Full Body" },
-  { name: "Box Jumps", category: "Cardio", muscle: "Legs, Cardio" },
-];
 
 const CATEGORIES = [
   "All",
@@ -102,7 +34,7 @@ const CATEGORIES = [
 interface ExercisePickerProps {
   visible: boolean;
   onClose: () => void;
-  onSelectExercise: (exerciseName: string) => void;
+  onSelectExercise: (exercise: Exercise) => void;
 }
 
 export default function ExercisePicker({
@@ -113,26 +45,150 @@ export default function ExercisePicker({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [customExercise, setCustomExercise] = useState("");
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredExercises = PREDEFINED_EXERCISES.filter((exercise) => {
-    const matchesSearch =
-      exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      exercise.muscle.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "All" || exercise.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Fetch exercises from Supabase
+  const fetchExercises = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  const handleSelectExercise = (exerciseName: string) => {
-    onSelectExercise(exerciseName);
+      let query = supabase.from("exercises").select("*").order("name");
+
+      // Apply category filter
+      if (selectedCategory !== "All") {
+        query = query.eq("category", selectedCategory);
+      }
+
+      // Apply search filter
+      if (searchQuery.trim()) {
+        query = query.or(
+          `name.ilike.%${searchQuery}%,muscle_groups.ilike.%${searchQuery}%`
+        );
+      }
+
+      const { data, error: fetchError } = await query;
+
+      if (fetchError) {
+        console.error("Supabase error:", fetchError);
+        throw fetchError;
+      }
+
+      setExercises(data || []);
+    } catch (err) {
+      console.error("Error fetching exercises:", err);
+      setError(
+        `Failed to load exercises: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Test Supabase connection
+  const testConnection = async () => {
+    try {
+      console.log("Testing Supabase connection...");
+      const { data, error } = await supabase
+        .from("exercises")
+        .select("count(*)", { count: "exact" });
+
+      console.log("Connection test result:", { data, error });
+
+      if (error) {
+        setError(`Connection failed: ${error.message}`);
+      } else {
+        console.log("Supabase connection successful");
+      }
+    } catch (err) {
+      console.error("Connection test failed:", err);
+      setError(
+        `Connection test failed: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+    }
+  };
+
+  // Fetch exercises when modal opens or filters change
+  useEffect(() => {
+    if (visible) {
+      // testConnection();
+      fetchExercises();
+    }
+  }, [visible, selectedCategory, searchQuery]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!visible) {
+      setSearchQuery("");
+      setCustomExercise("");
+      setSelectedCategory("All");
+      setError(null);
+    }
+  }, [visible]);
+
+  const handleSelectExercise = (exercise: Exercise) => {
+    onSelectExercise(exercise);
     setSearchQuery("");
     setCustomExercise("");
     onClose();
   };
 
-  const handleAddCustomExercise = () => {
-    if (customExercise.trim()) {
-      handleSelectExercise(customExercise.trim());
+  const handleAddCustomExercise = async () => {
+    if (!customExercise.trim()) {
+      Alert.alert("Error", "Please enter an exercise name");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Create a custom exercise object
+      const customExerciseData = {
+        name: customExercise.trim(),
+        category: "Custom",
+        muscle_groups: "Various",
+        instructions: "Custom exercise - add your own instructions",
+        equipment: "Various",
+        difficulty: "beginner" as const,
+      };
+
+      console.log("Adding custom exercise:", customExerciseData);
+
+      // Insert into database
+      const { data, error: insertError } = await supabase
+        .from("exercises")
+        .insert([customExerciseData])
+        .select()
+        .single();
+
+      console.log("Custom exercise insert result:", {
+        data,
+        error: insertError,
+      });
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      if (data) {
+        handleSelectExercise(data);
+      }
+    } catch (err) {
+      console.error("Error adding custom exercise:", err);
+      Alert.alert(
+        "Error",
+        `Failed to add custom exercise: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -151,6 +207,23 @@ export default function ExercisePicker({
       default:
         return <Dumbbell size={16} color="#6B7280" />;
     }
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case "beginner":
+        return "#059669";
+      case "intermediate":
+        return "#D97706";
+      case "advanced":
+        return "#DC2626";
+      default:
+        return "#6B7280";
+    }
+  };
+
+  const getDifficultyText = (difficulty: string) => {
+    return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
   };
 
   return (
@@ -223,56 +296,131 @@ export default function ExercisePicker({
             <TouchableOpacity
               style={[
                 styles.addCustomButton,
-                !customExercise.trim() && styles.addCustomButtonDisabled,
+                (!customExercise.trim() || loading) &&
+                  styles.addCustomButtonDisabled,
               ]}
               onPress={handleAddCustomExercise}
-              disabled={!customExercise.trim()}
+              disabled={!customExercise.trim() || loading}
             >
-              <Text
-                style={[
-                  styles.addCustomButtonText,
-                  !customExercise.trim() && styles.addCustomButtonTextDisabled,
-                ]}
-              >
-                Add
-              </Text>
+              {loading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Plus size={16} color="#FFFFFF" />
+                  <Text
+                    style={[
+                      styles.addCustomButtonText,
+                      (!customExercise.trim() || loading) &&
+                        styles.addCustomButtonTextDisabled,
+                    ]}
+                  >
+                    Add
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Error Message */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={fetchExercises}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Debug Info */}
+        {/* {__DEV__ && (
+          <View style={styles.debugContainer}>
+            <Text style={styles.debugText}>
+              Debug: {exercises.length} exercises loaded, Loading:{" "}
+              {loading.toString()}, Error: {error ? "Yes" : "No"}
+            </Text>
+          </View>
+        )} */}
 
         {/* Exercise List */}
         <ScrollView
           style={styles.exerciseList}
           showsVerticalScrollIndicator={false}
         >
-          {filteredExercises.map((exercise, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.exerciseItem}
-              onPress={() => handleSelectExercise(exercise.name)}
-            >
-              <View style={styles.exerciseIcon}>
-                {getCategoryIcon(exercise.category)}
-              </View>
-              <View style={styles.exerciseInfo}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <Text style={styles.exerciseMuscle}>{exercise.muscle}</Text>
-              </View>
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>
-                  {exercise.category}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-
-          {filteredExercises.length === 0 && searchQuery && (
-            <View style={styles.noResults}>
-              <Text style={styles.noResultsText}>No exercises found</Text>
-              <Text style={styles.noResultsSubtext}>
-                Try a different search term or add a custom exercise
-              </Text>
+          {loading && exercises.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#3B82F6" />
+              <Text style={styles.loadingText}>Loading exercises...</Text>
             </View>
+          ) : (
+            <>
+              {exercises.map((exercise) => (
+                <TouchableOpacity
+                  key={exercise.id}
+                  style={styles.exerciseItem}
+                  onPress={() => handleSelectExercise(exercise)}
+                >
+                  <View style={styles.exerciseIcon}>
+                    {getCategoryIcon(exercise.category)}
+                  </View>
+                  <View style={styles.exerciseInfo}>
+                    <View style={styles.exerciseHeader}>
+                      <Text style={styles.exerciseName}>{exercise.name}</Text>
+                      <View
+                        style={[
+                          styles.difficultyBadge,
+                          {
+                            backgroundColor:
+                              getDifficultyColor(
+                                exercise.difficulty || "beginner"
+                              ) + "20",
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.difficultyText,
+                            {
+                              color: getDifficultyColor(
+                                exercise.difficulty || "beginner"
+                              ),
+                            },
+                          ]}
+                        >
+                          {getDifficultyText(exercise.difficulty || "beginner")}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.exerciseMuscle}>
+                      {exercise.muscle_groups}
+                    </Text>
+                    {exercise.equipment && (
+                      <Text style={styles.exerciseEquipment}>
+                        Equipment: {exercise.equipment}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.categoryBadge}>
+                    <Text style={styles.categoryBadgeText}>
+                      {exercise.category}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+
+              {!loading && exercises.length === 0 && !error && (
+                <View style={styles.noResults}>
+                  <Text style={styles.noResultsText}>No exercises found</Text>
+                  <Text style={styles.noResultsSubtext}>
+                    {searchQuery ? "Try a different search term or " : ""}
+                    Add a custom exercise above
+                  </Text>
+                </View>
+              )}
+            </>
           )}
         </ScrollView>
       </View>
@@ -371,12 +519,15 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   addCustomButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     backgroundColor: "#3B82F6",
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    alignItems: "center",
     justifyContent: "center",
+    minWidth: 80,
   },
   addCustomButtonDisabled: {
     backgroundColor: "#E5E7EB",
@@ -388,6 +539,54 @@ const styles = StyleSheet.create({
   },
   addCustomButtonTextDisabled: {
     color: "#9CA3AF",
+  },
+  errorContainer: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#DC2626",
+    fontWeight: "500",
+  },
+  retryButton: {
+    backgroundColor: "#DC2626",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retryButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  debugContainer: {
+    margin: 16,
+    padding: 12,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 8,
+  },
+  debugText: {
+    fontSize: 12,
+    color: "#374151",
+    fontFamily: "monospace",
+  },
+  loadingContainer: {
+    alignItems: "center",
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#6B7280",
+    marginTop: 12,
   },
   exerciseList: {
     flex: 1,
@@ -403,6 +602,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   exerciseIcon: {
     width: 40,
@@ -416,15 +620,38 @@ const styles = StyleSheet.create({
   exerciseInfo: {
     flex: 1,
   },
+  exerciseHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
   exerciseName: {
     fontSize: 16,
     fontWeight: "600",
     color: "#111827",
-    marginBottom: 2,
+    flex: 1,
+  },
+  difficultyBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  difficultyText: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
   exerciseMuscle: {
     fontSize: 14,
     color: "#6B7280",
+    marginBottom: 2,
+  },
+  exerciseEquipment: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontStyle: "italic",
   },
   categoryBadge: {
     backgroundColor: "#EFF6FF",

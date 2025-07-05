@@ -243,14 +243,19 @@ export default function CalendarTab() {
 
   return (
     <AuthGuard>
-      <SafeAreaView style={styles.container}>
-        <ScrollView style={styles.scrollView}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
             <Text style={styles.title}>Workout Calendar</Text>
             <Text style={styles.subtitle}>
               Plan and track your fitness journey
             </Text>
           </View>
+
           {/* Calendar Header */}
           <View style={styles.calendarHeader}>
             <TouchableOpacity
@@ -259,9 +264,11 @@ export default function CalendarTab() {
             >
               <ChevronLeft size={24} color="#3B82F6" />
             </TouchableOpacity>
+
             <Text style={styles.monthYear}>
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </Text>
+
             <TouchableOpacity
               style={styles.navButton}
               onPress={() => navigateMonth("next")}
@@ -269,6 +276,7 @@ export default function CalendarTab() {
               <ChevronRight size={24} color="#3B82F6" />
             </TouchableOpacity>
           </View>
+
           {/* Day Names */}
           <View style={styles.dayNamesRow}>
             {dayNames.map((day) => (
@@ -277,6 +285,7 @@ export default function CalendarTab() {
               </Text>
             ))}
           </View>
+
           {/* Calendar Grid */}
           <View style={styles.calendarGrid}>
             {calendarDays.map((day, index) => (
@@ -300,6 +309,7 @@ export default function CalendarTab() {
                 >
                   {day.day}
                 </Text>
+
                 {/* Workout indicators */}
                 <View style={styles.workoutIndicators}>
                   {day.workouts.slice(0, 3).map((workout, idx) => (
@@ -320,6 +330,7 @@ export default function CalendarTab() {
               </TouchableOpacity>
             ))}
           </View>
+
           {/* Selected Date Details */}
           {selectedDate && (
             <View style={styles.selectedDateSection}>
@@ -335,6 +346,7 @@ export default function CalendarTab() {
                   <Text style={styles.scheduleButtonText}>Schedule</Text>
                 </TouchableOpacity>
               </View>
+
               {selectedDateWorkouts.length > 0 ? (
                 <View style={styles.workoutsList}>
                   {selectedDateWorkouts.map((workout) => (
@@ -374,6 +386,7 @@ export default function CalendarTab() {
                           />
                         </TouchableOpacity>
                       </View>
+
                       <View
                         style={[
                           styles.workoutStatus,
@@ -421,6 +434,7 @@ export default function CalendarTab() {
             </View>
           )}
         </ScrollView>
+
         {/* Schedule Workout Modal */}
         <Modal
           visible={showScheduleModal}
@@ -438,10 +452,12 @@ export default function CalendarTab() {
                 <X size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
+
             <View style={styles.modalContent}>
               <Text style={styles.modalDateText}>
                 {selectedDate && formatSelectedDate(selectedDate)}
               </Text>
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Workout Name</Text>
                 <TextInput
@@ -452,6 +468,7 @@ export default function CalendarTab() {
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Duration (minutes)</Text>
                 <TextInput
@@ -463,6 +480,7 @@ export default function CalendarTab() {
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
+
               <TouchableOpacity
                 style={styles.saveButton}
                 onPress={saveScheduledWorkout}
@@ -486,9 +504,13 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 32,
+  },
   header: {
     padding: 24,
     paddingBottom: 16,
+    paddingTop: 16,
   },
   title: {
     fontSize: 32,
