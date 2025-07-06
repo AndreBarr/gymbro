@@ -72,6 +72,12 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="workouts/[id]"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
